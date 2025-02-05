@@ -104,6 +104,14 @@ impl PiiDetector {
     }
 
     pub async fn detect(&self, input: &InputText) -> Result<PIIResponse> {
+        let (max_indices_vec, input_ids, tokenizer_encodings, max_scores_vec) = self.compute_logits(input).await;
+
+        let entities = self.process_input_ids(input_ids, max_indices_vec, tokenizer_encodings, max_scores_vec).await?;
+
+        Ok(PIIResponse { entities })
+    }
+
+    async fn compute_logits(&self, input: &InputText) -> (_, _, _, _) {
         let model = self.model.lock().await;
         let tokenizer = self.tokenizer.lock().await;
 
@@ -128,7 +136,6 @@ impl PiiDetector {
 
         let input_ids = CandleTensor::stack(&token_ids?, 0)?;
 
-
         // let texts = vec![input.text.as_str()];
         // let input_ids = tokenizer.encode_batch(texts.clone(), true).unwrap();
         //
@@ -141,10 +148,7 @@ impl PiiDetector {
         let input_ids = input_ids.to_vec2::<u32>()?;
         let tokenizer_encodings = tokenizer_encodings.iter().collect::<Vec<_>>();
         let max_scores_vec = max_scores_vec.iter().collect::<Vec<_>>();
-
-        let entities = self.process_input_ids(input_ids, max_indices_vec, tokenizer_encodings, max_scores_vec).await?;
-
-        Ok(PIIResponse { entities })
+        (max_indices_vec, input_ids, tokenizer_encodings, max_scores_vec)
     }
 
     async fn process_input_ids(
