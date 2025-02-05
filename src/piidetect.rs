@@ -172,7 +172,7 @@ impl PiiDetector {
         for (input_row_idx, input_id_row) in input_ids.iter().enumerate() {
             let current_row_encoding = tokenizer_encodings.get(input_row_idx).unwrap();
             let current_row_tokens = current_row_encoding.get_tokens();
-            let current_row_max_scores = max_scores_vec.get(input_row_idx).unwrap();
+            let current_row_max_scores = &max_scores_vec[input_row_idx];
             for (input_id_idx, _input_id) in input_id_row.iter().enumerate() {
                 // Do not include special characters in output
                 if current_row_encoding.get_special_tokens_mask()[input_id_idx] == 1 {
