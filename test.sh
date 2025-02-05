@@ -24,6 +24,11 @@ curl -X POST \
   -d '{"text": "My email is john.doe@example.com and my phone number is 555-123-4567."}' \
   http://localhost:8080/detect_pii
 
+
+# Test pdf
+curl -X POST http://localhost:8080/detect_and_replace_pii_pdf -H "Content-Type: application/pdf" --data-binary @test.pdf --output sanitized.pdf
+
+
 # Kill the server
 kill $SERVER_PID
 
