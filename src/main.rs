@@ -89,7 +89,7 @@ async fn detect_and_replace_pii_pdf(
                 };
 
                 // Replace page content with sanitized text
-                if let Err(e) = replace_page_text(&mut doc, page_id, &sanitized) {
+                if let Err(e) = replace_page_text(&mut doc, (page_id.0, page_id.1 as u32), &sanitized) {
                     tracing::error!("Error replacing PDF text: {}", e);
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
