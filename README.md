@@ -72,4 +72,9 @@ The service can be configured using environment variables. The following variabl
 
 ## License
 
-This project is licensed under the MIT License.
+This project is provided under the Commons Clause License Condition v1.0 (see [LICENSE](LICENSE) file for details) and follows the [Fair-code](https://faircode.io) principles.
+The license allows free non-production use. For commercial use or production deployments, please contact the author to discuss licensing options.
+
+## Author
+
+Sébastien Campion - sebastien.campion@foss4.eu
