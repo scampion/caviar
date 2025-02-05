@@ -155,7 +155,7 @@ impl PiiDetector {
         let logits = model.forward(&input_ids, &attention_mask).unwrap();
 
         let max_scores_vec = softmax(&logits, 2).unwrap().max(2).unwrap().to_vec2::<f32>().unwrap();
-        let max_indices_vec: Vec<Vec<u32>> = logits.argmax(2).unwrap().to_vec   2().unwrap();
+        let max_indices_vec: Vec<Vec<u32>> = logits.argmax(2).unwrap().to_vec2().unwrap();
         let input_ids = input_ids.to_vec2::<u32>().unwrap();
         let tokenizer_encodings = tokenizer_encodings.iter().collect::<Vec<_>>();
         (max_indices_vec, input_ids, tokenizer_encodings, max_scores_vec)
