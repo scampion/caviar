@@ -44,6 +44,19 @@ async fn detect_pii(
     }
 }
 
+async fn detect_and_replace_pii(
+    State(state): State<Arc<AppState>>,
+    Json(input): Json<InputText>,
+) -> Result<Json<PIIReplacementResponse>, StatusCode> {
+    match state.detector.detect_and_replace(&input).await {
+        Ok(response) => Ok(Json(response)),
+        Err(e) => {
+            tracing::error!("Error detecting and replacing PII: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -58,6 +71,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/detect_pii", post(detect_pii))
+        .route("/detect_and_replace_pii", post(detect_and_replace_pii))
         .route("/", get(|| async { "PII Detection" }))
         .with_state(shared_state);
 

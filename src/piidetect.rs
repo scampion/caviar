@@ -28,6 +28,12 @@ pub struct PIIResponse {
     pub entities: Vec<Entity>,
 }
 
+#[derive(Serialize)]
+pub struct PIIReplacementResponse {
+    pub entities: Vec<Entity>,
+    pub sanitized_text: String,
+}
+
 pub struct PiiDetector {
     model: Mutex<ModernBertForTokenClassification>,
     tokenizer: Mutex<Tokenizer>,
@@ -112,6 +118,22 @@ impl PiiDetector {
             .await?;
 
         Ok(PIIResponse { entities })
+    }
+
+    pub async fn detect_and_replace(&self, input: &InputText) -> Result<PIIReplacementResponse> {
+        let response = self.detect(input).await?;
+        let mut text = input.text.clone();
+        
+        // Replace entities in reverse order to avoid messing up indices
+        for entity in response.entities.iter().rev() {
+            let placeholder = format!("[{}]", entity.entity);
+            text.replace_range(entity.start..entity.end, &placeholder);
+        }
+
+        Ok(PIIReplacementResponse {
+            entities: response.entities,
+            sanitized_text: text,
+        })
     }
 
     async fn compute_logits(
