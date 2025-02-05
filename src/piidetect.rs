@@ -136,8 +136,8 @@ impl PiiDetector {
                 let tokens = tokens.get_attention_mask().to_vec();
                 CandleTensor::new(tokens.as_slice(), &self.device)
             })
-            .collect::<CandleResult<Vec<_>>>()?;
-        let attention_mask = CandleTensor::stack(&attention_mask, 0)?;
+            .collect::<CandleResult<Vec<_>>>().unwrap();
+        let attention_mask = CandleTensor::stack(&attention_mask, 0).unwrap();
 
 
         let token_ids: CandleResult<Vec<_>> = tokenizer_encodings
@@ -145,24 +145,24 @@ impl PiiDetector {
             .map(|tk| CandleTensor::new(tk.get_ids(), &self.device))
             .collect();
 
-        let input_ids = CandleTensor::stack(&token_ids?, 0)?;
+        let input_ids = CandleTensor::stack(&token_ids.unwrap(), 0).unwrap();
 
         // let texts = vec![input.text.as_str()];
         // let input_ids = tokenizer.encode_batch(texts.clone(), true).unwrap();
         //
         // let attention_mask = input_ids.get_attention_mask()?;
 
-        let logits = model.forward(&input_ids, &attention_mask)?;
+        let logits = model.forward(&input_ids, &attention_mask).unwrap();
 
-        let max_scores_vec = softmax(&logits, 2)?.max(2)?.to_vec2::<f32>()?;
-        let max_indices_vec: Vec<Vec<u32>> = logits.argmax(2)?.to_vec2()?;
-        let input_ids = input_ids.to_vec2::<u32>()?;
+        let max_scores_vec = softmax(&logits, 2).unwrap().max(2).unwrap().to_vec2::<f32>().unwrap();
+        let max_indices_vec: Vec<Vec<u32>> = logits.argmax(2).unwrap().to_vec   2().unwrap();
+        let input_ids = input_ids.to_vec2::<u32>().unwrap();
         let tokenizer_encodings = tokenizer_encodings.iter().collect::<Vec<_>>();
         let max_scores_vec = max_scores_vec.iter().collect::<Vec<_>>();
         (max_indices_vec, input_ids, tokenizer_encodings, max_scores_vec)
     }
 
-    async fn process_input_ids(
+    async fn process_and_merge_entities(
         &self,
         input_ids: Vec<Vec<u32>>,
         max_indices_vec: Vec<Vec<u32>>,
