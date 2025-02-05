@@ -114,7 +114,15 @@ impl PiiDetector {
         Ok(PIIResponse { entities })
     }
 
-    async fn compute_logits(&self, input: &InputText) -> (_, _, _, _) {
+    async fn compute_logits(
+        &self,
+        input: &InputText,
+    ) -> (
+        Vec<Vec<u32>>,
+        Vec<Vec<u32>>,
+        Vec<&tokenizers::Encoding>,
+        Vec<&Vec<f32>>,
+    ) {
         let model = self.model.lock().await;
         let tokenizer = self.tokenizer.lock().await;
 
