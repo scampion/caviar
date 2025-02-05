@@ -1,6 +1,8 @@
 # Caviar
 
-![Caviar Logo](logo.png)
+<p align="center">
+  <img src="logo.png"?raw=true" style="width: 200px; height: auto;" />
+</p>
 
 This is a service for detecting Personally Identifiable Information (PII) in text.
 
@@ -24,7 +26,7 @@ To run the service, you will need to have Rust and Cargo installed.
 3.  Run the service:
 
     ```bash
-    ./target/release/pii-detection-service
+    ./target/release/caviar
     ```
 
 The service will be available on port 8080.
