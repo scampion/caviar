@@ -24,6 +24,10 @@ struct Args {
     /// Port to listen on
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
+
+    /// Host to listen on
+    #[arg(short, long, default_value = "0.0.0.0")]
+    host: String,
 }
 
 #[axum_macros::debug_handler]
@@ -58,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
         .with_state(shared_state);
 
     let args = Args::parse();
-    let addr = format!("0.0.0.0:{}", args.port);
+    let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("listening on {}", listener.local_addr()?);
     println!("listening on {}", listener.local_addr()?);
