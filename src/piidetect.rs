@@ -120,7 +120,7 @@ impl PiiDetector {
     ) -> (
         Vec<Vec<u32>>,
         Vec<Vec<u32>>,
-        Vec<&tokenizers::Encoding>,
+        Vec<tokenizers::Encoding>,
         Vec<Vec<f32>>,
     ) {
         let model = self.model.lock().await;
@@ -157,7 +157,7 @@ impl PiiDetector {
         let max_scores_vec = softmax(&logits, 2).unwrap().max(2).unwrap().to_vec2::<f32>().unwrap();
         let max_indices_vec: Vec<Vec<u32>> = logits.argmax(2).unwrap().to_vec2().unwrap();
         let input_ids = input_ids.to_vec2::<u32>().unwrap();
-        let tokenizer_encodings = tokenizer_encodings.iter().collect::<Vec<_>>();
+        let tokenizer_encodings = tokenizer_encodings.into_iter().collect::<Vec<_>>();
         (max_indices_vec, input_ids, tokenizer_encodings, max_scores_vec)
     }
 
@@ -165,12 +165,12 @@ impl PiiDetector {
         &self,
         input_ids: Vec<Vec<u32>>,
         max_indices_vec: Vec<Vec<u32>>,
-        tokenizer_encodings: Vec<&tokenizers::Encoding>,
+        tokenizer_encodings: Vec<tokenizers::Encoding>,
         max_scores_vec: Vec<Vec<f32>>,
     ) -> Result<Vec<Entity>> {
         let mut entities = vec![];
         for (input_row_idx, input_id_row) in input_ids.iter().enumerate() {
-            let current_row_encoding = tokenizer_encodings.get(input_row_idx).unwrap();
+            let current_row_encoding = &tokenizer_encodings.get(input_row_idx).unwrap();
             let current_row_tokens = current_row_encoding.get_tokens();
             let current_row_max_scores = &max_scores_vec[input_row_idx];
             for (input_id_idx, _input_id) in input_id_row.iter().enumerate() {
