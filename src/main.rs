@@ -11,7 +11,7 @@ use std::sync::Arc;
 use clap::Parser;
 
 mod piidetect;
-use piidetect::{InputText, PIIResponse, PiiDetector};
+use piidetect::{InputText, PIIResponse, PIIReplacementResponse, PiiDetector};
 
 struct AppState {
     detector: Arc<PiiDetector>,
