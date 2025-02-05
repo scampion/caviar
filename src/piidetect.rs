@@ -104,9 +104,12 @@ impl PiiDetector {
     }
 
     pub async fn detect(&self, input: &InputText) -> Result<PIIResponse> {
-        let (max_indices_vec, input_ids, tokenizer_encodings, max_scores_vec) = self.compute_logits(input).await;
+        let (max_indices_vec, input_ids, tokenizer_encodings, max_scores_vec) =
+            self.compute_logits(input).await;
 
-        let entities = self.process_input_ids(input_ids, max_indices_vec, tokenizer_encodings, max_scores_vec).await?;
+        let entities = self
+            .process_and_merge_entities(input_ids, max_indices_vec, tokenizer_encodings, max_scores_vec)
+            .await?;
 
         Ok(PIIResponse { entities })
     }
@@ -191,6 +194,26 @@ impl PiiDetector {
                 });
             }
         }
-        Ok(entities)
+
+        // Merge continuous entities
+        let mut merged_entities: Vec<Entity> = Vec::new();
+        let mut i = 0;
+        while i < entities.len() {
+            let mut current_entity = entities[i].clone();
+            let mut j = i + 1;
+            while j < entities.len()
+                && entities[j].start == current_entity.end
+                && entities[j].entity == current_entity.entity
+            {
+                current_entity.word.push_str(&entities[j].word);
+                current_entity.end = entities[j].end;
+                current_entity.score = (current_entity.score + entities[j].score) / 2.0; // Average scores
+                j += 1;
+            }
+            merged_entities.push(current_entity);
+            i = j;
+        }
+
+        Ok(merged_entities)
     }
 }
