@@ -75,21 +75,27 @@ async fn detect_and_replace_pii_pdf(
 
     // Process each page
     for (page_num, page_id) in doc.get_pages() {
-        if let Some(content) = doc.get_page_content(page_id) {
-            // Extract text from PDF content
-            let text = extract_text_from_content(content);
-            // Detect and replace PII
-            let sanitized = match state.detector.detect_and_replace(&InputText { text }).await {
+        match doc.get_page_content(page_id) {
+            Ok(content) => {
+                // Extract text from PDF content
+                let text = extract_text_from_content(&content);
+                // Detect and replace PII
+                let sanitized = match state.detector.detect_and_replace(&InputText { text }).await {
                 Ok(response) => response.sanitized_text,
                 Err(e) => {
                     tracing::error!("Error processing PDF text: {}", e);
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
-            };
+                };
 
-            // Replace page content with sanitized text
-            if let Err(e) = replace_page_text(&mut doc, page_id, &sanitized) {
-                tracing::error!("Error replacing PDF text: {}", e);
+                // Replace page content with sanitized text
+                if let Err(e) = replace_page_text(&mut doc, page_id, &sanitized) {
+                    tracing::error!("Error replacing PDF text: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            }
+            Err(e) => {
+                tracing::error!("Error getting page content: {}", e);
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
         }
@@ -105,18 +111,8 @@ async fn detect_and_replace_pii_pdf(
     Ok(output)
 }
 
-fn extract_text_from_content(content: &Vec<Object>) -> String {
-    // Convert PDF content objects to text
-    content.iter()
-        .filter_map(|obj| {
-            if let Object::String(s, _) = obj {
-                Some(s.to_string())
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<String>>()
-        .join(" ")
+fn extract_text_from_content(content: &Vec<u8>) -> String {
+    String::from_utf8_lossy(content).to_string()
 }
 
 fn replace_page_text(doc: &mut Document, page_id: (u32, u32), text: &str) -> Result<(), lopdf::Error> {
