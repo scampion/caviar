@@ -346,6 +346,7 @@ dependencies = [
  "candle-core",
  "candle-nn",
  "candle-transformers",
+ "clap",
  "env_logger",
  "hf-hub",
  "log",
