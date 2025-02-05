@@ -4,7 +4,10 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
     Router,
+    body::Bytes,
 };
+use lopdf::{Document, Object};
+use std::io::Cursor;
 use env_logger;
 use log::info;
 use std::sync::Arc;
@@ -57,6 +60,76 @@ async fn detect_and_replace_pii(
     }
 }
 
+async fn detect_and_replace_pii_pdf(
+    State(state): State<Arc<AppState>>,
+    pdf_bytes: Bytes,
+) -> Result<Vec<u8>, StatusCode> {
+    // Load PDF from bytes
+    let mut doc = match Document::load_from(Cursor::new(pdf_bytes.as_ref())) {
+        Ok(doc) => doc,
+        Err(e) => {
+            tracing::error!("Error loading PDF: {}", e);
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    };
+
+    // Process each page
+    for page_id in doc.get_pages() {
+        if let Some(content) = doc.get_page_content(page_id) {
+            // Extract text from PDF content
+            let text = extract_text_from_content(&content);
+            
+            // Detect and replace PII
+            let sanitized = match state.detector.detect_and_replace(&InputText { text }).await {
+                Ok(response) => response.sanitized_text,
+                Err(e) => {
+                    tracing::error!("Error processing PDF text: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
+            // Replace page content with sanitized text
+            if let Err(e) = replace_page_text(&mut doc, page_id, &sanitized) {
+                tracing::error!("Error replacing PDF text: {}", e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+    }
+
+    // Save modified PDF to bytes
+    let mut output = Vec::new();
+    if let Err(e) = doc.save_to(&mut output) {
+        tracing::error!("Error saving PDF: {}", e);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    Ok(output)
+}
+
+fn extract_text_from_content(content: &Vec<Object>) -> String {
+    // Convert PDF content objects to text
+    content.iter()
+        .filter_map(|obj| {
+            if let Object::String(s, _) = obj {
+                Some(s.to_string())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
+fn replace_page_text(doc: &mut Document, page_id: (u32, u32), text: &str) -> Result<(), lopdf::Error> {
+    // Create new content with sanitized text
+    let new_content = vec![Object::string_literal(text)];
+    
+    // Replace page content
+    doc.change_page_content(page_id, new_content)?;
+    
+    Ok(())
+}
+
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -72,6 +145,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/detect_pii", post(detect_pii))
         .route("/detect_and_replace_pii", post(detect_and_replace_pii))
+        .route("/detect_and_replace_pii_pdf", post(detect_and_replace_pii_pdf))
         .route("/", get(|| async { "PII Detection" }))
         .with_state(shared_state);
 
