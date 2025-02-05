@@ -8,12 +8,22 @@ use axum::{
 use env_logger;
 use log::info;
 use std::sync::Arc;
+use clap::Parser;
 
 mod piidetect;
 use piidetect::{InputText, PIIResponse, PiiDetector};
 
 struct AppState {
     detector: Arc<PiiDetector>,
+}
+
+/// PII detection server
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Port to listen on
+    #[arg(short, long, default_value_t = 8080)]
+    port: u16,
 }
 
 #[axum_macros::debug_handler]
@@ -37,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Starting server");
     let detector = PiiDetector::new()?;
-    
+
     let shared_state = Arc::new(AppState {
         detector: Arc::new(detector),
     });
@@ -47,7 +57,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(|| async { "PII Detection" }))
         .with_state(shared_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
+    let args = Args::parse();
+    let addr = format!("0.0.0.0:{}", args.port);
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("listening on {}", listener.local_addr()?);
     println!("listening on {}", listener.local_addr()?);
     axum::serve(listener, app).await?;
