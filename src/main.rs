@@ -26,7 +26,7 @@ struct Args {
     port: u16,
 
     /// Host to listen on
-    #[arg(short, long, default_value = "0.0.0.0")]
+    #[arg(short = 'i', long, default_value = "0.0.0.0")]
     host: String,
 }
 
