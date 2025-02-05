@@ -13,7 +13,7 @@ pub struct InputText {
     pub text: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Entity {
     pub word: String,
     pub entity: String,
