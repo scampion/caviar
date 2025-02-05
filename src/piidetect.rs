@@ -139,11 +139,23 @@ impl PiiDetector {
         let max_scores_vec = softmax(&logits, 2)?.max(2)?.to_vec2::<f32>()?;
         let max_indices_vec: Vec<Vec<u32>> = logits.argmax(2)?.to_vec2()?;
         let input_ids = input_ids.to_vec2::<u32>()?;
+        let tokenizer_encodings = tokenizer_encodings.iter().collect::<Vec<_>>();
+        let max_scores_vec = max_scores_vec.iter().collect::<Vec<_>>();
 
-        //let id2label = config.id2label;
+        let entities = self.process_input_ids(input_ids, max_indices_vec, tokenizer_encodings, max_scores_vec).await?;
+
+        Ok(PIIResponse { entities })
+    }
+
+    async fn process_input_ids(
+        &self,
+        input_ids: Vec<Vec<u32>>,
+        max_indices_vec: Vec<Vec<u32>>,
+        tokenizer_encodings: Vec<&tokenizers::Encoding>,
+        max_scores_vec: Vec<&Vec<f32>>,
+    ) -> Result<Vec<Entity>> {
         let mut entities = vec![];
         for (input_row_idx, input_id_row) in input_ids.iter().enumerate() {
-            let mut current_row_result: Vec<NERItem> = Default::default();
             let current_row_encoding = tokenizer_encodings.get(input_row_idx).unwrap();
             let current_row_tokens = current_row_encoding.get_tokens();
             let current_row_max_scores = max_scores_vec.get(input_row_idx).unwrap();
@@ -165,14 +177,6 @@ impl PiiDetector {
                     continue;
                 }
 
-                current_row_result.push(NERItem {
-                    entity: label.clone(),
-                    word: current_row_tokens[input_id_idx].clone(),
-                    score: current_row_max_scores[input_id_idx],
-                    start: current_row_encoding.get_offsets()[input_id_idx].0,
-                    end: current_row_encoding.get_offsets()[input_id_idx].1,
-                    index: input_id_idx,
-                });
                 entities.push(Entity {
                     entity: label,
                     word: current_row_tokens[input_id_idx].clone(),
@@ -183,7 +187,6 @@ impl PiiDetector {
                 });
             }
         }
-
-        Ok(PIIResponse { entities })
+        Ok(entities)
     }
 }
