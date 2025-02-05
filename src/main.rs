@@ -74,8 +74,8 @@ async fn detect_and_replace_pii_pdf(
     };
 
     // Process each page
-    for page_id in doc.get_pages() {
-        if let Some(content) = doc.get_page_content(page_id) {
+    for (page_num, page_id) in doc.get_pages() {
+        if let Some(content) = doc.get_page_content(page_num) {
             // Extract text from PDF content
             let text = extract_text_from_content(&content);
             
