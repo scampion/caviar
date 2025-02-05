@@ -117,11 +117,11 @@ fn extract_text_from_content(content: &Vec<u8>) -> String {
 
 fn replace_page_text(doc: &mut Document, page_id: (u32, u32), text: &str) -> Result<(), lopdf::Error> {
     // Create new content with sanitized text
-    let new_content = vec![Object::string_literal(text)];
-    
+    let new_content = vec![Object::string_literal(text.as_bytes())];
+
     // Replace page content
-    doc.change_page_content(page_id, new_content)?;
-    
+    doc.change_page_content((page_id.0, page_id.1 as u16), new_content)?;
+
     Ok(())
 }
 
