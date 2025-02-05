@@ -1,4 +1,6 @@
-# PII Detection Service
+# Caviar
+
+![Caviar Logo](logo.png)
 
 This is a service for detecting Personally Identifiable Information (PII) in text.
 
