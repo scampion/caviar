@@ -8,28 +8,16 @@ This is a service for detecting Personally Identifiable Information (PII) in tex
 
 ## Getting Started
 
-To run the service, you will need to have Rust and Cargo installed.
+To run the service, download the binary on the [release page](https://github.com/burgonet-eu/caviar/releases)
+and run it:
 
-1.  Clone the repository:
-
-    ```bash
-    git clone <repository_url>
-    cd <repository_directory>
-    ```
-
-2.  Build the project:
-
-    ```bash
-    cargo build --release
-    ```
-
-3.  Run the service:
-
-    ```bash
-    ./target/release/caviar
-    ```
+```bash
+./caviar
+```
 
 The service will be available on port 8080.
+
+The first time, the deep learning model will be downloaded, you will need around 600MB of free space available.
 
 ## Usage
 
