@@ -76,10 +76,14 @@ async fn detect_and_replace_pii_pdf(
     pdf_bytes: Bytes,
 ) -> Result<Vec<u8>, StatusCode> {
 
-    #[cfg(feature = "nom_parser")]
-    let text = extract_text_from_pdf();
-
-    debug!("Extracted text page 1 : {}", text);
+    let text: String;
+    #[cfg(feature = "nom_parser")] {
+        text = extract_text_from_pdf();
+        debug!("Extracted text page 1 : {}", text);
+    }
+    #[cfg(not(feature = "nom_parser"))] {
+        text = String::new();
+    }
 
     // Load PDF from bytes
     let mut doc = match Document::load_from(Cursor::new(pdf_bytes.as_ref())) {
