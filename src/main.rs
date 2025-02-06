@@ -10,6 +10,7 @@ use lopdf::{Document, Object};
 use std::io::Cursor;
 use env_logger;
 use log::info;
+use log::debug;
 use std::sync::Arc;
 use clap::Parser;
 
@@ -60,10 +61,23 @@ async fn detect_and_replace_pii(
     }
 }
 
+#[cfg(not(feature = "async"))]
+#[cfg(feature = "nom_parser")]
+fn extract_text_from_pdf() -> String {
+    let mut doc = Document::load("test.pdf").unwrap();
+    let text = doc.extract_text(&[1]).unwrap();
+    debug!("Extracted text: {}", text);
+    text
+}
+
+
 async fn detect_and_replace_pii_pdf(
     State(state): State<Arc<AppState>>,
     pdf_bytes: Bytes,
 ) -> Result<Vec<u8>, StatusCode> {
+
+    extract_text_from_pdf();
+
     // Load PDF from bytes
     let mut doc = match Document::load_from(Cursor::new(pdf_bytes.as_ref())) {
         Ok(doc) => doc,
@@ -73,31 +87,42 @@ async fn detect_and_replace_pii_pdf(
         }
     };
 
+    // let mut doc = Document::load("test.pdf").unwrap();
+
     // Process each page
     for (page_num, page_id) in doc.get_pages() {
-        match doc.get_page_content(page_id) {
-            Ok(content) => {
-                // Extract text from PDF content
-                let text = extract_text_from_content(&content);
-                // Detect and replace PII
-                let sanitized = match state.detector.detect_and_replace(&InputText { text }).await {
-                Ok(response) => response.sanitized_text,
-                Err(e) => {
-                    tracing::error!("Error processing PDF text: {}", e);
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                }
-                };
+        // use  extract_text_chunks(&self, page_numbers: &[u32]) -> Vec<Result<String>>
 
-                // Replace page content with sanitized text
-                if let Err(e) = replace_page_text(&mut doc, (page_id.0, page_id.1 as u32), &sanitized) {
-                    tracing::error!("Error replacing PDF text: {}", e);
+        for chunk in doc.extract_text_chunks(&[page_num]) {
+            match chunk {
+                Ok(text) => {
+                    debug!("Extracted chunk: {}", text);
+                }
+                Err(e) => {
+                    tracing::error!("Error extracting PDF text: {}", e);
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
             }
-            Err(e) => {
-                tracing::error!("Error getting page content: {}", e);
-                return Err(StatusCode::INTERNAL_SERVER_ERROR);
-            }
+        }
+
+        let text = doc.extract_text(&[page_num]).unwrap();
+
+        // Detect and replace PII
+        // let sanitized = match state.detector.detect_and_replace(&InputText { text }).await {
+        // Ok(response) => response.sanitized_text,
+        // Err(e) => {
+        //     tracing::error!("Error processing PDF text: {}", e);
+        //     return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        // }
+        // };
+        let sanitized = text;
+
+        debug!("Sanitized text: {}", sanitized);
+
+        // Replace page content with sanitized text
+        if let Err(e) = replace_page_text(&mut doc, (page_id.0, page_id.1 as u32), &sanitized) {
+            tracing::error!("Error replacing PDF text: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
 
