@@ -21,4 +21,5 @@ env_logger = "0.9"
 log = "0.4.25"
 hf-hub = "0.4.1"
 clap = { version = "4.0", features = ["derive"] }
-lopdf = "0.31"
+lopdf = "0.35"
+pdf-extract = "0.8.0"

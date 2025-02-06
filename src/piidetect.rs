@@ -4,6 +4,7 @@ use candle_nn::{VarBuilder, ops::softmax};
 use candle_transformers::models::modernbert::{ModernBertForTokenClassification, Config, NERItem};
 use hf_hub::{Repo, RepoType, api::sync::Api};
 use log::info;
+use log::debug;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tokenizers::Tokenizer;
@@ -150,7 +151,6 @@ impl PiiDetector {
 
         let texts = vec![input.text.as_str()];
         let tokenizer_encodings = tokenizer.encode_batch(texts.clone(), true).unwrap();
-
 
         let attention_mask = tokenizer_encodings
             .iter()

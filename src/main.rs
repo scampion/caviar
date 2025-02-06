@@ -87,10 +87,14 @@ async fn detect_and_replace_pii_pdf(
         // Replace entities in reverse order to avoid messing up indices
         for entity in response.entities.iter().rev() {
             doc.replace_text(i as u32, &entity.word, format!("[{}]", entity.entity).as_str());
-
+            debug!("Replaced {} with [{}]", entity.word, entity.entity);
             //let placeholder = format!("[{}]", entity.entity);
             //text.replace_range(entity.start..entity.end, &placeholder);
 
+        }
+        doc.save("modified.pdf").unwrap();
+        if i == 0 {
+            break;
         }
 
     }
