@@ -13,6 +13,7 @@ use log::info;
 use log::debug;
 use std::sync::Arc;
 use clap::Parser;
+use pdf_extract;
 
 mod piidetect;
 use piidetect::{InputText, PIIResponse, PIIReplacementResponse, PiiDetector};
@@ -61,31 +62,11 @@ async fn detect_and_replace_pii(
     }
 }
 
-#[cfg(not(feature = "async"))]
-#[cfg(feature = "nom_parser")]
-fn extract_text_from_pdf() -> String {
-    let mut doc = Document::load("test.pdf").unwrap();
-    let text = doc.extract_text(&[1]).unwrap();
-    debug!("Extracted text page 1 : {}", text);
-    text
-}
-
-
 async fn detect_and_replace_pii_pdf(
     State(state): State<Arc<AppState>>,
     pdf_bytes: Bytes,
 ) -> Result<Vec<u8>, StatusCode> {
 
-    let text: String;
-    #[cfg(feature = "nom_parser")] {
-        text = extract_text_from_pdf();
-        debug!("Extracted text page 1 : {}", text);
-    }
-    #[cfg(not(feature = "nom_parser"))] {
-        text = String::new();
-    }
-
-    // Load PDF from bytes
     let mut doc = match Document::load_from(Cursor::new(pdf_bytes.as_ref())) {
         Ok(doc) => doc,
         Err(e) => {
@@ -94,44 +75,66 @@ async fn detect_and_replace_pii_pdf(
         }
     };
 
-    // let mut doc = Document::load("test.pdf").unwrap();
-
-    // Process each page
-    for (page_num, page_id) in doc.get_pages() {
-        // use  extract_text_chunks(&self, page_numbers: &[u32]) -> Vec<Result<String>>
-
-        // for chunk in doc.extract_text_chunks(&[page_num]) {
-        //     match chunk {
-        //         Ok(text) => {
-        //             debug!("Extracted chunk: {}", text);
-        //         }
-        //         Err(e) => {
-        //             tracing::error!("Error extracting PDF text: {}", e);
-        //             return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        //         }
-        //     }
-        // }
-
-        let text = doc.extract_text(&[page_num]).unwrap();
-
+    let pages = pdf_extract::extract_text_from_mem_by_pages(&pdf_bytes).unwrap();
+    for (i, page) in pages.iter().enumerate() {
+        println!("Page {}: {}", i + 1, page);
         // Detect and replace PII
-        // let sanitized = match state.detector.detect_and_replace(&InputText { text }).await {
-        // Ok(response) => response.sanitized_text,
-        // Err(e) => {
-        //     tracing::error!("Error processing PDF text: {}", e);
-        //     return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        // }
-        // };
-        let sanitized = text;
+        let text = page.to_string();
 
-        // debug!("Sanitized text: {}", sanitized);
+        let input = InputText { text };
+        let response = state.detector.detect(&input).await.unwrap();
+        let mut text = input.text.clone();
+        // Replace entities in reverse order to avoid messing up indices
+        for entity in response.entities.iter().rev() {
+            doc.replace_text(i, &entity.word, format!("[{}]", entity.entity));
 
-        // Replace page content with sanitized text
-        if let Err(e) = replace_page_text(&mut doc, (page_id.0, page_id.1 as u32), &sanitized) {
-            tracing::error!("Error replacing PDF text: {}", e);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            //let placeholder = format!("[{}]", entity.entity);
+            //text.replace_range(entity.start..entity.end, &placeholder);
+
         }
+
     }
+
+    // Load PDF from bytes
+
+    // let mut doc = Document::load("test.pdf").unwrap();
+    //
+    // // Process each page
+    // for (page_num, page_id) in doc.get_pages() {
+    //     // use  extract_text_chunks(&self, page_numbers: &[u32]) -> Vec<Result<String>>
+    //
+    //     // for chunk in doc.extract_text_chunks(&[page_num]) {
+    //     //     match chunk {
+    //     //         Ok(text) => {
+    //     //             debug!("Extracted chunk: {}", text);
+    //     //         }
+    //     //         Err(e) => {
+    //     //             tracing::error!("Error extracting PDF text: {}", e);
+    //     //             return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    //     //         }
+    //     //     }
+    //     // }
+    //
+    //     let text = doc.extract_text(&[page_num]).unwrap();
+    //
+    //     // Detect and replace PII
+    //     // let sanitized = match state.detector.detect_and_replace(&InputText { text }).await {
+    //     // Ok(response) => response.sanitized_text,
+    //     // Err(e) => {
+    //     //     tracing::error!("Error processing PDF text: {}", e);
+    //     //     return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    //     // }
+    //     // };
+    //     let sanitized = text;
+    //
+    //     // debug!("Sanitized text: {}", sanitized);
+    //
+    //     // Replace page content with sanitized text
+    //     if let Err(e) = replace_page_text(&mut doc, (page_id.0, page_id.1 as u32), &sanitized) {
+    //         tracing::error!("Error replacing PDF text: {}", e);
+    //         return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    //     }
+    // }
 
     // Save modified PDF to bytes
     let mut output = Vec::new();
@@ -143,19 +146,6 @@ async fn detect_and_replace_pii_pdf(
     Ok(output)
 }
 
-fn extract_text_from_content(content: &Vec<u8>) -> String {
-    String::from_utf8_lossy(content).to_string()
-}
-
-fn replace_page_text(doc: &mut Document, page_id: (u32, u32), text: &str) -> Result<(), lopdf::Error> {
-    // Create new content with sanitized text
-    let new_content = text.as_bytes().to_vec();
-
-    // Replace page content
-    doc.change_page_content((page_id.0, page_id.1 as u16), new_content)?;
-
-    Ok(())
-}
 
 
 #[tokio::main]
