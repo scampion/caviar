@@ -86,7 +86,7 @@ async fn detect_and_replace_pii_pdf(
         let mut text = input.text.clone();
         // Replace entities in reverse order to avoid messing up indices
         for entity in response.entities.iter().rev() {
-            doc.replace_text(i, &entity.word, format!("[{}]", entity.entity));
+            doc.replace_text(i as u32, &entity.word, format!("[{}]", entity.entity));
 
             //let placeholder = format!("[{}]", entity.entity);
             //text.replace_range(entity.start..entity.end, &placeholder);
