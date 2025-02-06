@@ -76,6 +76,7 @@ async fn detect_and_replace_pii_pdf(
     pdf_bytes: Bytes,
 ) -> Result<Vec<u8>, StatusCode> {
 
+    #[cfg(feature = "nom_parser")]
     extract_text_from_pdf();
 
     // Load PDF from bytes
