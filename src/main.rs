@@ -66,7 +66,7 @@ async fn detect_and_replace_pii(
 fn extract_text_from_pdf() -> String {
     let mut doc = Document::load("test.pdf").unwrap();
     let text = doc.extract_text(&[1]).unwrap();
-    debug!("Extracted text: {}", text);
+    debug!("Extracted text page 1 : {}", text);
     text
 }
 
@@ -77,7 +77,9 @@ async fn detect_and_replace_pii_pdf(
 ) -> Result<Vec<u8>, StatusCode> {
 
     #[cfg(feature = "nom_parser")]
-    extract_text_from_pdf();
+    let text = extract_text_from_pdf();
+
+    debug!("Extracted text page 1 : {}", text);
 
     // Load PDF from bytes
     let mut doc = match Document::load_from(Cursor::new(pdf_bytes.as_ref())) {
@@ -94,17 +96,17 @@ async fn detect_and_replace_pii_pdf(
     for (page_num, page_id) in doc.get_pages() {
         // use  extract_text_chunks(&self, page_numbers: &[u32]) -> Vec<Result<String>>
 
-        for chunk in doc.extract_text_chunks(&[page_num]) {
-            match chunk {
-                Ok(text) => {
-                    debug!("Extracted chunk: {}", text);
-                }
-                Err(e) => {
-                    tracing::error!("Error extracting PDF text: {}", e);
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                }
-            }
-        }
+        // for chunk in doc.extract_text_chunks(&[page_num]) {
+        //     match chunk {
+        //         Ok(text) => {
+        //             debug!("Extracted chunk: {}", text);
+        //         }
+        //         Err(e) => {
+        //             tracing::error!("Error extracting PDF text: {}", e);
+        //             return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        //         }
+        //     }
+        // }
 
         let text = doc.extract_text(&[page_num]).unwrap();
 
@@ -118,7 +120,7 @@ async fn detect_and_replace_pii_pdf(
         // };
         let sanitized = text;
 
-        debug!("Sanitized text: {}", sanitized);
+        // debug!("Sanitized text: {}", sanitized);
 
         // Replace page content with sanitized text
         if let Err(e) = replace_page_text(&mut doc, (page_id.0, page_id.1 as u32), &sanitized) {
